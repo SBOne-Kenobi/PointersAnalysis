@@ -1,0 +1,48 @@
+// Encoded code fragment:
+//
+// x = h1();
+// y = h2();
+// z = x;
+// x.f = y;
+// w = z.f;
+
+.type var <: symbol
+.type obj <: symbol
+.type field <: symbol
+
+// -- inputs --
+.decl assign(a: var, b: var)
+.decl new(v: var, o: obj)
+.decl ld(a: var, b: var, f: field)
+.decl st(a: var, f: field, b: var)
+
+
+// -- facts --
+
+assign("z", "x").
+
+new("x", "h1").
+new("y", "h2").
+
+ld("w", "z", "f").
+st("x", "f", "y").
+
+
+// -- analysis --
+
+.decl alias(a: var, b: var)
+.output alias
+alias(X, X) :- assign(X, _).
+alias(X, X) :- assign(_, X).
+alias(X, Y) :- assign(X, Y).
+alias(X, Y) :- ld(X, A, F), alias(A, B), st(B, F, Y).
+
+.decl pointsTo(a: var, o: obj)
+.output pointsTo
+pointsTo(X, Y) :- new(X, Y).
+pointsTo(X, Y) :- alias(X, Z), pointsTo(Z, Y).
+
+.decl fieldPointsTo(a: var, f: field, o: obj)
+.output fieldPointsTo
+fieldPointsTo(X, F, Y) :- st(X, F, A), pointsTo(A, Y).
+fieldPointsTo(X, F, Y) :- alias(X, A), fieldPointsTo(A, F, Y).
